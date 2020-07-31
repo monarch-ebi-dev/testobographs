@@ -24,30 +24,22 @@ public class OBOGraphsTesterApp {
     }
 
     private void run() {
-        String name = ontology_file.getName().replace(".obo", ".json").replace(".owl", ".json");
+        String name = ontology_file.getName();
         File jsonOutFile = new File(testdir, name + "_1.json");
         File jsonOutFile2 = new File(testdir, name + "_2.json");
 
         try {
-            GraphDocument gd;
-            if (ontology_file.getName().endsWith(".json")) {
-                gd = OgJsonReader.readFile(ontology_file);
-            } else {
-                OWLOntologyManager m = OWLManager.createOWLOntologyManager();
-                OWLOntology ontology = m.loadOntologyFromOntologyDocument(ontology_file);
-                FromOwl fromOwl = new FromOwl();
-                gd = fromOwl.generateGraphDocument(ontology);
-            }
+            GraphDocument gd = new LoadOntology().invoke(ontology_file);
             String jsonStr = OgJsonGenerator.render(gd);
             FileUtils.writeStringToFile(jsonOutFile, jsonStr, "utf-8");
-            GraphDocument gd2 = OgJsonReader.readFile(jsonOutFile);
+            GraphDocument gd2 = new LoadOntology().invoke(ontology_file);
             String jsonStr2 = OgJsonGenerator.render(gd2);
             FileUtils.writeStringToFile(jsonOutFile2, jsonStr2, "utf-8");
 
             if (FileUtils.contentEquals(jsonOutFile2, jsonOutFile)) {
-                System.out.println(ontology_file.getName() + " round-tripped correctly");
+                System.out.println(ontology_file.getName() + " deterministic output");
             } else {
-                System.out.println(ontology_file.getName() + " did NOT roundtrip!");
+                System.out.println(ontology_file.getName() + " output NOT deterministic!");
                 System.out.println("diff " + jsonOutFile + " " + jsonOutFile2);
             }
 
@@ -66,16 +58,32 @@ public class OBOGraphsTesterApp {
     public static void main(String[] args) throws OWLOntologyCreationException, IOException {
 
 
-/*
+
 		String ontology_path = args[0];
 		String testdir_path = args[1];
-*/
+/*
         String ontology_path = "/Users/matentzn/ws/c-elegans-phenotype-ontology/wbphenotype.owl";
         String testdir_path = "/Users/matentzn/data";
+
+ */
 
         File ontology_file = new File(ontology_path);
         File testdir_file = new File(testdir_path);
         new OBOGraphsTesterApp(ontology_file, testdir_file);
     }
 
+    private class LoadOntology {
+        public GraphDocument invoke(File ontology_file) throws IOException, OWLOntologyCreationException {
+            GraphDocument gd;
+            if (ontology_file.getName().endsWith(".json")) {
+                gd = OgJsonReader.readFile(ontology_file);
+            } else {
+                OWLOntologyManager m = OWLManager.createOWLOntologyManager();
+                OWLOntology ontology = m.loadOntologyFromOntologyDocument(ontology_file);
+                FromOwl fromOwl = new FromOwl();
+                gd = fromOwl.generateGraphDocument(ontology);
+            }
+            return gd;
+        }
+    }
 }
